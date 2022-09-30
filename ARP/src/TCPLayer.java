@@ -20,34 +20,43 @@ unsigned char Padding[4]; //(4byte)
 unsigned char tcp_data[ TCP_DATA_SIZE ]; // data part
 }TCPLayer_HEADER, *LPTCPLayer_HEADER ;
 */
-	private class _ETHERNET_ADDR {
-		private byte[] addr = new byte[6];
+	private class _TCP_ADDR {
+		private byte[] addr = new byte[2];
 
-		public _ETHERNET_ADDR() {
+		public _TCP_ADDR () {
 			this.addr[0] = (byte) 0x00;
 			this.addr[1] = (byte) 0x00;
-			this.addr[2] = (byte) 0x00;
-			this.addr[3] = (byte) 0x00;
-			this.addr[4] = (byte) 0x00;
-			this.addr[5] = (byte) 0x00;
 		}
 	}
 
-	private class _ETHERNET_HEADER {
-		_ETHERNET_ADDR enet_dstaddr;
-		_ETHERNET_ADDR enet_srcaddr;
-		byte[] enet_type;
-		byte[] enet_data;
+	private class _TCP_HEADER {
+		_TCP_ADDR tcp_sport; // source port (2byte)
+		_TCP_ADDR tcp_dport;// destination port (2byte)
+		byte[] tcp_seq; // sequence number (4byte)
+		byte[] tcp_ack; // acknowledged sequence (4byte)
+		byte tcp_offset; // no use (1byte)
+		byte tcp_flag; // control flag (1byte)
+		byte[] tcp_window; // no use (2byte)
+		byte[] tcp_cksum; // check sum (2byte)
+		byte[] tcp_urgptr; // no use (2byte)
+		byte[] Padding; //(4byte)
+		byte[] tcp_data; // data part
 
-		public _ETHERNET_HEADER() {
-			this.enet_dstaddr = new _ETHERNET_ADDR();
-			this.enet_srcaddr = new _ETHERNET_ADDR();
-			this.enet_type = new byte[2];
-			this.enet_data = null;
+		public _TCP_HEADER() {
+			this.tcp_dport = new _TCP_ADDR();
+			this.tcp_sport = new _TCP_ADDR();
+			this.tcp_seq = new byte[4];
+			this.tcp_ack = new byte[4];
+			this.tcp_offset = (byte) 0x00;
+			this.tcp_flag = (byte) 0x00;
+			this.tcp_cksum = new byte[2];
+			this.tcp_urgptr = new byte[2];
+			this.Padding = new byte[4];
+
 		}
 	}
 
-	_ETHERNET_HEADER m_sHeader = new _ETHERNET_HEADER();
+	_TCP_HEADER m_sHeader = new _TCP_HEADER();
 
 	public TCPLayer(String pName) {
 		// super(pName);

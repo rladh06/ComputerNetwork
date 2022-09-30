@@ -32,23 +32,30 @@ unsigned char ip_data[IP_DATA_SIZE]; // variable length data
 	}
 
 	private class _IP_HEADER {
-		byte ip_verlen;
-		byte ip_tos;
-		byte[] ip_len;
-		byte[] ip_id;
-		byte[] ip_fragoff;
-		byte ip_ttl;
-		byte ip_proto;
-		byte[] ip_cksum;
-		_IP_ADDR ip_src;
-		_IP_ADDR ip_dst;
-		byte[] ip_data;
+		byte ip_verlen; // ip version ->IPv4 : 4 (1byte)
+		byte ip_tos; // type of service (1byte)
+		byte[] ip_len; // total packet length (2byte)
+		byte[] ip_id; // datagram id (2byte)
+		byte[] ip_fragoff; // fragment offset (2byte)
+		byte ip_ttl; // time to live in gateway hops (1byte)
+		byte ip_proto; // IP protocol (1byte)
+		byte[] ip_cksum; // header checksum (2byte)
+		_IP_ADDR ip_src; // IP address of source (4byte)
+		_IP_ADDR ip_dst; // IP address of destination (4byte)
+		byte[] ip_data; // variable length data
 
 
 		public _IP_HEADER() {
 			this.ip_src = new _IP_ADDR();
 			this.ip_dst = new _IP_ADDR();
+			this.ip_verlen = (byte) 4;
+			this.ip_tos = (byte)0x00;
 			this.ip_len = new byte[2];
+			this.ip_id = new byte[2];
+			this.ip_fragoff = new byte[2];
+			this.ip_ttl = (byte)0x00;
+			this.ip_proto = (byte)0x00;
+			this.ip_cksum = new byte[2];
 
 		}
 	}
