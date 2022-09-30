@@ -1,4 +1,8 @@
-# 2022 Computer Network: TermProject#1 ARP
+# 2022 Computer Network
+1. ARP Protocol
+2. Static Router
+
+# TermProject#1 ARP
 
 ## ARP Protocol
 IP 주소를 이용하여 MAC Address 를 알아내기 위한 프로토콜 
