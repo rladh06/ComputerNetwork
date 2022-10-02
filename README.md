@@ -27,7 +27,7 @@ IP 주소를 이용하여 MAC Address 를 알아내기 위한 프로토콜
 ## ToDo List
 
 ### 1. Application Layer
-- [ ] GUI 생성
+- [x] GUI 생성
 - [ ] 각 Layer 연결
 - [ ] cache table update
 
