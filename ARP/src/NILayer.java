@@ -1,4 +1,5 @@
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.Date;
 import java.util.ArrayList;
@@ -56,6 +57,18 @@ public class NILayer implements BaseLayer {
 			System.err.printf("Can't read list of devices, error is %s", errbuf.toString());
 			return;
 		}
+	}
+
+	// MAC Address를 받아오는 함수
+	public byte[] getMACAddress() {
+		byte[] mac_addr = new byte[6];
+		try {
+			mac_addr = m_pAdapterList.get(0).getHardwareAddress();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return mac_addr;
 	}
 
 	public boolean Send(byte[] input, int length) {
