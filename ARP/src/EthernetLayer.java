@@ -92,8 +92,8 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Receive(byte[] input) {
-		if(IsItMyPacket(input)) return false; // Src 소스 주소가 나면 폐기
-		if(IsItMine(input) && input[12] == (byte) 0x08 || IsItBroadcast(input)){// broadcast이거나,  목적지가 나일시 
+
+		if((IsItMine(input)|| IsItBroadcast(input)) && input[12] == (byte) 0x08  &&! IsItMyPacket(input)){// broadcast이거나,  목적지가 나일시 
 				byte[] datas = RemoveEtherHeader(input, input.length);
 				if(input[13] == (byte) 0x00) // IP 0x08 [00]
 					 this.GetUpperLayer(1).Receive(datas);
