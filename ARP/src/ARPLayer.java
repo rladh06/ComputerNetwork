@@ -6,7 +6,11 @@ public class ARPLayer implements BaseLayer{
     public String pLayerName = null;
     public BaseLayer p_UnderLayer = null;
     public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-
+    
+    // ARP Cache Table
+    public ArrayList<_ARP_Cache> ArpCacheTable = new ArrayList<>();
+    //Proxy Entry Table
+    public ArrayList<_Proxy_Entry> ProxyEntryTable = new ArrayList<>();
 
     private class _IP_ADDR {
         private byte[] addr = new byte[4];
@@ -32,16 +36,6 @@ public class ARPLayer implements BaseLayer{
         }
     }
 
-    /*
-     * [Description of ARP Field]
-     * hardType      // 2bytes. Type of Hardware Address
-     * protType      // 2bytes. Type of Protocol Address
-     * hardSize      // 1byte. (Ethernet - 6bytes)
-     * protSize      // 1byte. (IP - 4bytes)
-     * opCode        // 2bytes.
-     * sender's Ethernet & IP Address
-     * target's Ehternet & IP Address
-     */
 
     private class _ARP_MSG {
         byte[] hardType;                // 2bytes. Type of Hardware Address
@@ -67,6 +61,31 @@ public class ARPLayer implements BaseLayer{
             this.dstIPAddr = new _IP_ADDR();
         }
     }
+    
+    // ARP Cache
+    public class _ARP_Cache {
+    	byte[] ipAddr;
+    	byte[] macAddr;
+    	boolean status;				// complete == true, incomplete == false
+    	
+    	public _ARP_Cache(byte[] ipAddr, byte[] macAddr, boolean status) {
+    		this.ipAddr = ipAddr;
+    		this.macAddr = macAddr;
+    		this.status = status;
+    	}
+    }
+    
+    public class _Proxy_Entry {
+    	String hostName;
+    	byte[] ipAddr;
+    	byte[] macAddr;
+    	
+    	public _Proxy_Entry (String hostName, byte[] ipAddr, byte[] macAddr) {
+    		this.hostName = hostName;
+    		this.ipAddr = ipAddr;
+    		this.macAddr = macAddr;
+    	}
+    }
 
     /*
     *   TODO
@@ -86,6 +105,11 @@ public class ARPLayer implements BaseLayer{
     // Reply Send할 때 쓸 함수
     public boolean ReplySend(_ARP_MSG arpMsg) {
         _ARP_MSG rplMsg = new _ARP_MSG();
+        // opcode 2로 설정
+        
+        //Sender & Target 정보 서로 변경
+        
+        // 하위 Layer로 내려보냄
 
         return true;
     }
@@ -95,7 +119,7 @@ public class ARPLayer implements BaseLayer{
 
         // case 0: Basic ARP or Proxy ARP
         // 나한테 온 메세지인지 확인 -> 나한테 온 거면 ARP Reply 전송해야
-        // 나한테 온 메세지인지 확인하는 방법 : 내 IP주소와 일치하는지? 나의 Proxt Table에 해당 IP가 존재하는지?
+        // 나한테 온 메세지인지 확인하는 방법 : 내 IP주소와 일치하는지? 나의 Proxy Table에 해당 IP가 존재하는지?
 
         // case 1: Gratuitous ARP
         // Cache Table Update
@@ -107,8 +131,9 @@ public class ARPLayer implements BaseLayer{
     }
 
     // _ARP_MSG Object를 byte[]로 바꿔주는 함수
-    public byte[] ObjToByte(_ARP_MSG arpMsg, int length) {
+    public byte[] ObjToByte(_ARP_MSG arpMsg, byte[] input, int length) {
         byte[] buf = new byte[27 + length];
+        
         return buf;
     }
 
