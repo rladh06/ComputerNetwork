@@ -75,8 +75,8 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		byte[] type = {(byte)0x00, (byte) 0x01}; //type 설정
-		for (int i = 0; i < 2; i++) m_sHeader.enet_type[i] = type[i];
+		//상위 계층의 종류에 따라 헤더에 상위 프로토콜 형태 저장 후 물리적 계층으로 전달 
+		
 		byte[] bytes = ObjToByte(m_sHeader, input, length);
 		this.GetUnderLayer().send(bytes, length + 14);
 		return false;
@@ -92,14 +92,15 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Receive(byte[] input) {
-		if(IsItMine(input) && input[12] == (byte) 0x08 || IsItMyPacket(input) && IsItBroadcast(input)){//내주소이고 broadcast이거나,  나일시 
+		if(IsItMyPacket(input)) return false; // Src 소스 주소가 나면 폐기
+		if(IsItMine(input) && input[12] == (byte) 0x08 || IsItBroadcast(input)){// broadcast이거나,  목적지가 나일시 
 				byte[] datas = RemoveEtherHeader(input, input.length);
 				if(input[13] == (byte) 0x00) // IP 0x08 [00]
 					 this.GetUpperLayer(1).Receive(datas);
 				else if(input[13] == (byte) 0x06) // ARP 0x08 [06]
 					this.GetUpperLayer(0).receive(datas);
 				else return false;
-		}else{
+		}else{ // 
 			return false;
 		}
 		
