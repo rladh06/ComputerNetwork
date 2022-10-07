@@ -112,9 +112,30 @@ public class ARPLayer implements BaseLayer{
     }
 
 
-    public boolean Send(byte[] input, int length) {
+    public boolean Send(byte[] input, int length, byte[] dstIPAddress) {
         // Cache Entry Table에서 확인(있으면 거기로 전송, 없으면 캐시 추가)
+        byte[] sendMsg = new byte[28];
 
+        // Arp Cache Table에 없는 경우
+        if (!IsInArpCacheTable(dstIPAddress)) {
+            ArpCacheTable.add(new _ARP_Cache(dstIPAddress, new byte[6], false));    // incompleted
+        }
+
+        // input 복사
+        System.arraycopy(input, 0, sendMsg, 0, length);
+
+        // opcond 1
+        sendMsg[7] = (byte) 0x01;
+
+        // sender Ethernet address, IP address 설정
+        System.arraycopy(arp_header.srcMacAddr, 0, sendMsg, 8, 6);
+        System.arraycopy(arp_header.srcIPAddr, 0, sendMsg, 14, 4);
+
+        // target IP address 설정
+        System.arraycopy(dstIPAddress, 0, sendMsg, 24, 4);
+
+        // 하위 Layer로 내려보냄
+        ((EthernetLayer)this.GetUnderLayer()).Send(sendMsg, 28); 
 
         return true;
     }
@@ -199,7 +220,18 @@ public class ARPLayer implements BaseLayer{
     	return false;	//Proxy Table에 존재하지 않는 경우
     }
 
-    
+    // Arp Cache Table에 있는지 확인하는 함수
+    public boolean IsInArpCacheTable(byte[] targetIP) {
+    	// iterator로 ArrayList를 순회
+    	Iterator <_ARP_Cache> iter = ArpCacheTable.iterator();
+    	while(iter.hasNext()) {
+    		// targetIP와 Entry의 IP주소가 같은지 확인
+    		if (Arrays.equals(targetIP, iter.next().ipAddr)){
+    			return true;
+    		}
+    	}
+    	return false;	//Proxy Table에 존재하지 않는 경우
+    }
     
     @Override
     public void SetUnderLayer(BaseLayer pUnderLayer) {
