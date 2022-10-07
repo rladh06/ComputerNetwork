@@ -42,6 +42,22 @@ public class EthernetLayer implements BaseLayer {
 
 	_ETHERNET_HEADER m_sHeader = new _ETHERNET_HEADER();
 
+	public void set_type(byte type){ // 타입저장
+		m_sHeader.enet_data[1] = (byte)type;
+	}
+	public void set_dstaddr(byte[] dst){  // 목적지 저장
+	m_sHeader.enet_dstaddr =  dst;
+	}
+	public void set_srcaddr(byte[] src){  // 주소 저장
+		m_sHeader.enet_srcaddr =  src;
+	}
+	public  byte[] get_dst(){  //dst return
+		return m_sHeader.enet_dstaddr.addr;
+	}
+	public  byte[] get_src(){  //src return
+		return m_sHeader.enet_srcaddr.addr;
+	}
+	
 	public EthernetLayer(String pName) {
 		// super(pName);
 		// TODO Auto-generated constructor stub
