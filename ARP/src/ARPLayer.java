@@ -232,6 +232,60 @@ public class ARPLayer implements BaseLayer{
     	}
     	return false;	//Proxy Table에 존재하지 않는 경우
     }
+
+    // ARP Cache Table 추가하는 함수
+    public boolean AddARPCache(byte[] IPAddr, byte[] MACAddr, boolean status) {
+        _ARP_Cache newArpCache = new _ARP_Cache(IPAddr, MACAddr, status);
+        ArpCacheTable.add(newArpCache);
+        return true;
+    }
+
+    // ARP Cache Table 삭제하는 함수
+    public boolean RemoveARPCache(byte[] IPAddr) {
+        for(int i = 0; i < ArpCacheTable.size() ; i++) {
+            // 순회하면서 지우려고 하는 IP주소가 있는지 확인.
+            if(Arrays.equals(ArpCacheTable.get(i).ipAddr, IPAddr)) {
+                ArpCacheTable.remove(i);    // ArrayList에서 index이용해 제거한다.
+                return true;
+            }
+        }
+        return false;
+    }
+    // ARP Cache Table 업데이트 하는 함수
+    public boolean UpdateARPCache(byte[] IPAddr, byte[] MACAddr, boolean status) {
+        // iterator로 ArrayList를 순회
+        Iterator <_ARP_Cache> iter = ArpCacheTable.iterator();
+        while(iter.hasNext()) {
+            // 받은 IP주소와 Entry의 IP주소가 같은지 확인
+            if (Arrays.equals(IPAddr, iter.next().ipAddr)){
+                if (iter.next().macAddr == null) {
+                    iter.next().macAddr = MACAddr;
+                    iter.next().status = true;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Proxy Table에 Entry 추가하는 함수
+    public boolean AddPoxyEntry(String hostName, byte[] ipAddr, byte[] macAddr) {
+        _Proxy_Entry newProxyEntry = new _Proxy_Entry(hostName, ipAddr, macAddr);
+        ProxyEntryTable.add(newProxyEntry);
+        return true;
+    }
+    // Proxy Table에 Entry 삭제하는 함수
+    public boolean RemoveProxyEntry(byte[] ipAddr) {
+        for(int i = 0; i < ProxyEntryTable.size() ; i++) {
+            // 순회하면서 지우려고 하는 IP주소가 있는지 확인.
+            if(Arrays.equals(ProxyEntryTable.get(i).ipAddr, ipAddr)) {
+                ProxyEntryTable.remove(i);    // ArrayList에서 index이용해 제거한다.
+                return true;
+            }
+        }
+        return false;
+    }
+
     
     @Override
     public void SetUnderLayer(BaseLayer pUnderLayer) {
