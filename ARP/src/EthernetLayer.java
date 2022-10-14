@@ -112,9 +112,10 @@ public class EthernetLayer implements BaseLayer {
 
 		if((IsItMine(input)|| IsItBroadcast(input))  && !IsItMyPacket(input)){// broadcast이거나,  목적지가 나일시 
 				byte[] datas = RemoveEtherHeader(input, input.length);
-				if(input[12] == (byte)0x08 && input[13] == (byte) 0x06) // ARP 0x08 [06]
-					
-					((ARPLayer)this.GetUpperLayer(0)).Receive(datas);
+				if(input[12] == (byte)0x08 && input[13] == (byte) 0x06){ // ARP 0x08 [06]
+					System.out.println(this.GetUpperLayer(1).GetLayerName());
+					((ARPLayer)this.GetUpperLayer(1)).Receive(datas);
+				}
 				else return false;
 		}else{ // 
 			return false;
@@ -200,5 +201,9 @@ public class EthernetLayer implements BaseLayer {
 		}
 		return true;
 	}
+	
+	public void RequestUpdate() {
+    	((IPLayer)this.GetUpperLayer(0)).RequestUpdate();
+    }
 
 }
