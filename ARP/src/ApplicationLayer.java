@@ -29,6 +29,8 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
     public BaseLayer p_UnderLayer = null;
     public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
     public ArrayList<PcapIf> m_pAdapterList;
+    public byte[] MY_IP;
+    public byte[] MY_MAC;
 
     String path;
 
@@ -141,7 +143,6 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 					// Step3. Application Layer의 ArpCacheList 업데이트
 					
 					//Step1
-					System.out.println("Basic ARP 전송 시작");
 					String[] dstIP = IPAddrInput.getText().split("\\.");
 					byte[] dstIPAddr = new byte[4];
 					for (int i = 0; i < 4; i++) {
@@ -151,6 +152,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 					// Step2
 					String msg = "";	// 상위 Layer에서 내려가는 data
 					byte[] input = msg.getBytes();
+					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstIPAddr(dstIPAddr);
 					((ARPLayer) m_LayerMgr.GetLayer("ARP")).Send(input, input.length, dstIPAddr);
 					//Step3
 					GetArpTable();
@@ -253,8 +255,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 			public void actionPerformed(ActionEvent e) {
 				String macAddr = GARPAddrInput.getText();
 				byte[] addr = StringToMAC(macAddr);
-				byte[] temp = null;
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).GARPSend(temp, temp.length);
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).GARPSend(addr);
 			}
 		});
 		btnGratSend.setBounds(144, 132, 75, 39);
@@ -324,11 +325,12 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 					e1.printStackTrace();
 				}
 				srcMacAddress.setText(MacAddr);
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).setSrcMac(MacAddress);
+				MY_MAC = MacAddress;		// 나의 MAC 주소를 Application Layer에 저장함
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcMacAddr(MacAddress);;
 				
 				srcIPAddress.setText("");
 				String IPAddress = "";
-				// 현재 내 IP 주소 가져오기
+				// 현재 내 IP 주소 가져오기 : String Type
 				try {
 					IPAddress = InetAddress.getLocalHost().getHostAddress();
 				} catch (UnknownHostException e2) {
@@ -336,25 +338,19 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 					e2.printStackTrace();
 				}
 				srcIPAddress.setText(IPAddress);
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).setSrcIP(StringToIP(IPAddress));
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcIPAddr(StringToIP(IPAddress));
 
-				byte[] SrcMacAddress = new byte[6];
 				byte[] SrcIPAddress = new byte[4];
-
-				String srcMAC = srcMacAddress.getText();
 				String srcIP = srcIPAddress.getText();
-
-				String[] byte_src_mac = srcMAC.split(":");
-				for (int i = 0; i < 6; i++) {
-					SrcMacAddress[i] = (byte) Integer.parseInt(byte_src_mac[i], 16);
-				}
 
 				String[] byte_src_ip = srcIP.split("\\.");
 				for (int i = 0; i < 4; i++) {
 					SrcIPAddress[i] = (byte) Integer.parseInt(byte_src_ip[i]);
 				}
-
-				((EthernetLayer) m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(SrcMacAddress);
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcIPAddr(SrcIPAddress);
+				MY_IP = SrcIPAddress;
+				
+				((EthernetLayer) m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(MacAddress);
 //					((EthernetLayer) m_LayerMgr.GetLayer("Ethernet")).SetEnetDstAddress(dstAddress);
 
 				((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(selected_index);
@@ -387,6 +383,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 	
 	// GetArpTable : ARPLayer의 ARPCacheTable을 읽어오는 함수
 	public boolean GetArpTable() {
+		System.out.println("!!!! GUI Update !!!!");
 		// AppLayer의 ARPCacheList 초기화
 		ARPCacheList.removeAll();
 		Iterator<ARPLayer._ARP_Cache> iter = ARPLayer.ArpCacheTable.iterator();
@@ -399,7 +396,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 			String strIPAddr = ipToString(ipAddr);
 			
 			strMacAddr = arpCache.status == true ? macToString(macAddr) : "???????????";
-			ARPCacheList.add(strIPAddr + "          " + strMacAddr + "          " + status);
+			ARPCacheList.add(String.format("%15s", strIPAddr) + "          " + strMacAddr + "          " + status);
 		}
 		return true;
 	}
