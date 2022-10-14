@@ -41,10 +41,16 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		m_LayerMgr.AddLayer(new NILayer("NI"));
 		m_LayerMgr.AddLayer(new EthernetLayer("ETHERNET"));
 		m_LayerMgr.AddLayer(new ARPLayer("ARP"));
+		m_LayerMgr.AddLayer(new IPLayer("IP"));
+		m_LayerMgr.AddLayer(new TCPLayer("TCP"));
 		m_LayerMgr.AddLayer(new ApplicationLayer("GUI"));
 
 		
-		m_LayerMgr.ConnectLayers("NI ( *ETHERNET ( *ARP ( *GUI ) ) )"); 
+		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( +IP ( *TCP ( *GUI ) ) ) ) ");
+		// ARP Layer - IP Layer 단방향 연결
+		m_LayerMgr.GetLayer("IP").SetUnderLayer(m_LayerMgr.GetLayer("ARP"));
+		// ARP Layer - Ethernet Layer 양방향 연결
+		m_LayerMgr.GetLayer("ETHERNET").SetUpperUnderLayer(m_LayerMgr.GetLayer("ARP"));
 
 	}
 
@@ -133,6 +139,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		BasicPanel.add(IPAddrLabel);
 		
 		
+		// ARP Send 버튼
 		btnBasicSend = new JButton("Send");
 		btnBasicSend.setBounds(262, 382, 75, 35);
 		btnBasicSend.addActionListener(new ActionListener(){
@@ -152,8 +159,14 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 					// Step2
 					String msg = "";	// 상위 Layer에서 내려가는 data
 					byte[] input = msg.getBytes();
+					
+					// ARP Layer의 dstIP 주소를 dstIPAddr로 설정한다.
 					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstIPAddr(dstIPAddr);
-					((ARPLayer) m_LayerMgr.GetLayer("ARP")).Send(input, input.length, dstIPAddr);
+					// IP Layer의 dstIP주소를 dstIPAddr로 설정한다.
+					((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_dst(dstIPAddr);
+					
+					// TCP Layer로 내려보낸다.
+					((TCPLayer)m_LayerMgr.GetLayer("TCP")).Send(input, 0);
 					//Step3
 					GetArpTable();
 				}
@@ -196,12 +209,10 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		btnProxyDelete.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				int index = ProxyEntryList.getSelectedIndex();
-				System.out.println("선택된 index : " + index);
-				System.out.println("원래의 ProxyTable : " + ((ARPLayer)m_LayerMgr.GetLayer("ARP")).ProxyEntryTable.size());
 				if(index >= 0) {
 					DeleteProxy(index);
 				}
-				GetProxyTable();
+				GetProxyTable();//Proxy Table 갱신
 			}
 		});
 		btnProxyDelete.setBounds(195, 384, 105, 33);
@@ -254,8 +265,23 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		btnGratSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				String macAddr = GARPAddrInput.getText();
-				byte[] addr = StringToMAC(macAddr);
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).GARPSend(addr);
+				byte[] addr = StringToMAC(macAddr);		// 입력된 MAC 주소(이게 내 주소라고 생각)
+				
+				// ARP Layer의 src주소, dst 주소 모두 addr로 설정한다.
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcMacAddr(addr);	// Sender 주소
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstMacAddr(addr);	// Target 주소
+				
+				// IPLayer의 dst ip주소를 나의 ip 주소로 설정한다.
+				((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_dst(MY_IP);
+				
+				// Ethernet Layer의 src mac 주소를 addr로 설정한다.
+				((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(addr);
+				
+				// TCP Layer로 내려보낸다.
+				// Step2
+				String msg = "";	// 상위 Layer에서 내려가는 data
+				byte[] input = msg.getBytes();
+				((TCPLayer)m_LayerMgr.GetLayer("TCP")).Send(input, input.length);
 			}
 		});
 		btnGratSend.setBounds(144, 132, 75, 39);
@@ -299,26 +325,24 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		srcIPAddress.setBounds(120, 115, 188, 24);
 		panel.add(srcIPAddress);
 		
+		// Network Interface Card 설정하는 부분
 		JButton btnSetting = new JButton("Setting");
 		btnSetting.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				
 				String selected = NICList.getSelectedItem().toString();
 				selected_index = NICList.getSelectedIndex();
+				// Network Layer에서 Adapter Number 저장
+				((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(selected_index);
+				
 				srcMacAddress.setText("");
 				String MacAddr = "";
 				byte[] MacAddress = new byte[6];
+				
 				// 해당 Network Interface에서 Ethernet 주소를 가져오는 함수
 				try {
 					MacAddress = ((NILayer) m_LayerMgr.GetLayer("NI")).GetAdapterObject(selected_index)
 																	  .getHardwareAddress();
-//					String hexNumber;
-//					for (int i = 0; i < 6; i++) {
-//						hexNumber = Integer.toHexString(0xff & MacAddress[i]).toUpperCase();
-//						MacAddr += hexNumber.toUpperCase();
-//						if (i != 5)
-//							MacAddr += ":";
-//					}
 					MacAddr = macToString(MacAddress).toUpperCase();
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
@@ -326,10 +350,13 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 				}
 				srcMacAddress.setText(MacAddr);
 				MY_MAC = MacAddress;		// 나의 MAC 주소를 Application Layer에 저장함
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcMacAddr(MacAddress);;
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcMacAddr(MY_MAC);
+				((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(MY_MAC);
 				
+				// IP주소 저장하는 과정.
 				srcIPAddress.setText("");
 				String IPAddress = "";
+				
 				// 현재 내 IP 주소 가져오기 : String Type
 				try {
 					IPAddress = InetAddress.getLocalHost().getHostAddress();
@@ -338,22 +365,11 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 					e2.printStackTrace();
 				}
 				srcIPAddress.setText(IPAddress);
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcIPAddr(StringToIP(IPAddress));
-
-				byte[] SrcIPAddress = new byte[4];
-				String srcIP = srcIPAddress.getText();
-
-				String[] byte_src_ip = srcIP.split("\\.");
-				for (int i = 0; i < 4; i++) {
-					SrcIPAddress[i] = (byte) Integer.parseInt(byte_src_ip[i]);
-				}
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcIPAddr(SrcIPAddress);
-				MY_IP = SrcIPAddress;
+				MY_IP = StringToIP(IPAddress);
+				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcIPAddr(MY_IP);
+				((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_src(MY_IP);	//IP Layer에 나의 IP 저장
 				
-				((EthernetLayer) m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(MacAddress);
-//					((EthernetLayer) m_LayerMgr.GetLayer("Ethernet")).SetEnetDstAddress(dstAddress);
-
-				((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(selected_index);
+				// 여기까지 기본 설정(NI Adapter 설정, 나의 MAC 주소 설정, 나의 IP 주소 저장)
 
 			}
 		});
@@ -383,7 +399,6 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 	
 	// GetArpTable : ARPLayer의 ARPCacheTable을 읽어오는 함수
 	public boolean GetArpTable() {
-		System.out.println("!!!! GUI Update !!!!");
 		// AppLayer의 ARPCacheList 초기화
 		ARPCacheList.removeAll();
 		Iterator<ARPLayer._ARP_Cache> iter = ARPLayer.ArpCacheTable.iterator();
@@ -395,14 +410,17 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 			String strMacAddr = "";
 			String strIPAddr = ipToString(ipAddr);
 			
-			strMacAddr = arpCache.status == true ? macToString(macAddr) : "???????????";
+			// MAC 주소 알면 MAC 주소로, 모르면 ????????로 나타냄
+			strMacAddr = arpCache.status == true ? macToString(macAddr) : "???????????????";
 			ARPCacheList.add(String.format("%15s", strIPAddr) + "          " + strMacAddr + "          " + status);
 		}
 		return true;
 	}
 	// DeleteARP
 	public boolean DeleteARP(int index){
+		// ARP Layer에서 해당 index의 ARP Cache를 제거
 		ARPLayer.ArpCacheTable.remove(index);
+		// GUI Update
 		GetArpTable();
 		return true;
 	}

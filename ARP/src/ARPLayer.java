@@ -10,7 +10,7 @@ public class ARPLayer implements BaseLayer{
     public String pLayerName = null;
     public BaseLayer p_UnderLayer = null;
     public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-    _ARP_MSG arp_header;
+
     byte[] BROADCAST = broadcast();
 
     
@@ -105,10 +105,9 @@ public class ARPLayer implements BaseLayer{
         
         
     }
-    
+    _ARP_MSG arp_header = new _ARP_MSG();
     // ARP MSG Reset 함수
     private void ResetMSG() {
-    	arp_header = new _ARP_MSG();
     	arp_header.hardType[0] = (byte)0x00;
     	arp_header.hardType[1] = (byte)0x01;		// hardware Type은 0x01 고정
     	arp_header.protType[0] = (byte)0x08;
@@ -117,8 +116,6 @@ public class ARPLayer implements BaseLayer{
     	arp_header.protSize = (byte)0x04;			// IPv4 사용하므로 4bytes
     	arp_header.opCode[0] = (byte)0x00;
     	arp_header.opCode[1] = (byte)0x01;			//Request를 기본으로
-    	arp_header.dstMacAddr = new byte[6];		// 초기화 => 모두 0
-    	
     }
     
     
@@ -178,10 +175,11 @@ public class ARPLayer implements BaseLayer{
     }
 
 
-    public boolean Send(byte[] input, int length, byte[] dstIPAddress) {
-    	this.arp_header.setDstIPAddr(dstIPAddress);
-    	((EthernetLayer)this.GetUnderLayer()).set_srcaddr(((ApplicationLayer)this.GetUpperLayer(0)).MY_MAC);
+    public boolean Send(byte[] input, int length) {
+    	byte[] dstIPAddress = arp_header.getDstIPAddr();
     	int index;
+ 
+    	
     	if((index = IsInArpCacheTable(dstIPAddress)) > 0) {
     		System.out.println("ARP Cache Table에 있는 IP주소로 전송 시작");
     		byte[] TargetMac = ArpCacheTable.get(index).getMacAddr();
@@ -201,13 +199,6 @@ public class ARPLayer implements BaseLayer{
 
     }
     
-    // GARP Send 함수
-    public boolean GARPSend(byte[] MACADDR) {
-    	// 미구현...
-    	
-    	return true;
-    	
-    }
 
     // Reply Send할 때 쓸 함수
     public boolean ReplySend(byte[] request) {
@@ -218,7 +209,7 @@ public class ARPLayer implements BaseLayer{
     	byte[] rplMsg = new byte[request.length];
     	System.arraycopy(request, 0, rplMsg, 0, request.length);
     	rplMsg[7] = (byte)0x02;	//opcode 변경
-    	System.arraycopy(((ApplicationLayer)this.GetUpperLayer(0)).MY_MAC, 0, rplMsg, 8, 6);	//MyMac(Target MAC) -> SenderMac
+    	System.arraycopy(arp_header.getSrcMacAddr(), 0, rplMsg, 8, 6);	//MyMac(Target MAC) -> SenderMac
     	System.arraycopy(request, 24, rplMsg, 14, 4);	// TargetIP -> Sender IP
     	System.arraycopy(request, 8, rplMsg, 18, 6);		// Sender Mac -> TargetMac
     	System.arraycopy(request, 14, rplMsg, 24, 4); 	// Sender IP -> TargetIP
@@ -242,17 +233,23 @@ public class ARPLayer implements BaseLayer{
 
     // Receive 함수
     public boolean Receive(byte[] input) {
-    	System.out.println("메세지 받는중");
+    	System.out.print("메세지 받는중 : ");
+    	for(int i = 0 ; i < input.length ; i++) {
+    		System.out.print(input[i]+" ");
+    	}
+    	System.out.println();
     	byte[] opCode = Arrays.copyOfRange(input, 6, 8);
     	byte[] SenderMac = Arrays.copyOfRange(input, 8, 14);
     	byte[] SenderIP = Arrays.copyOfRange(input, 14,18);
     	byte[] TargetIP = Arrays.copyOfRange(input, 24,28);
 
     	UpdateARPCache(SenderIP, SenderMac, true);
-    	((ApplicationLayer)this.GetUpperLayer(0)).GetArpTable();
     	if(opCode[1] == (byte) 0x01){
 	    	// 나한테 온 것 -> Reply보내야함
-	    	if(IsMyIP(TargetIP)) {
+    		if(IsIPEquals(SenderIP, TargetIP)) {
+    			System.out.println("GARP MSG 받음");
+    		}
+    		else if(IsMyIP(TargetIP)) {
 	    		System.out.println("나한테 온 메세지 - Reply 전송합니다.");
 	    		ReplySend(input);
 	    	} else if(IsInProxyTable(TargetIP)) {
@@ -260,7 +257,8 @@ public class ARPLayer implements BaseLayer{
 	    		ReplySend(input);
 	    	}
     	}
-    	((ApplicationLayer)this.GetUpperLayer(0)).GetArpTable();
+    	
+    	RequestUpdate();
 
 		return true;
     }
@@ -290,7 +288,7 @@ public class ARPLayer implements BaseLayer{
 
     // ARP Msg의 Target IP와 나의 IP 주소와 비교
     public boolean IsMyIP (byte[] targetIP) {
-    	byte[] myIP = ((ApplicationLayer)this.GetUpperLayer(0)).MY_IP;
+    	byte[] myIP = arp_header.getSrcIPAddr();
     	for(int i = 0; i < 4 ; i++) {
     		// 일치하지 않는 경우
     		if (myIP[i] != targetIP[i]) {
@@ -361,14 +359,11 @@ public class ARPLayer implements BaseLayer{
     public boolean UpdateARPCache(byte[] IPAddr, byte[] MACAddr, boolean status) {
         // iterator로 ArrayList를 순회
         int idx = IsInArpCacheTable(IPAddr);
-        // 있으면 : 업데이트 한다
         if(idx >= 0){
 		    ArpCacheTable.get(idx).setIpAddr(IPAddr);
 		    ArpCacheTable.get(idx).setMacAddr(MACAddr);
 		    ArpCacheTable.get(idx).setStatus(status);
-        } 
-        // 없으면 : 추가한다.
-        else {
+        } else {
         	ArpCacheTable.add(new _ARP_Cache(IPAddr, MACAddr, status));
         }
         
@@ -392,7 +387,7 @@ public class ARPLayer implements BaseLayer{
         }
         return false;
     }
-    // Broadcast 주소를 생성하는 함수 => 변수 BROADCAST에 저장함
+    
     public byte[] broadcast() {
     	byte[] bc = new byte[6];
     	for(int i = 0 ; i < 6 ; i++) {
@@ -440,6 +435,10 @@ public class ARPLayer implements BaseLayer{
     public void SetUpperUnderLayer(BaseLayer pUULayer) {
         this.SetUpperLayer(pUULayer);
         pUULayer.SetUnderLayer(this);
+    }
+    
+    public void RequestUpdate() {
+    	((EthernetLayer)this.GetUnderLayer()).RequestUpdate();
     }
 
 
