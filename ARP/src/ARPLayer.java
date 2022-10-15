@@ -183,25 +183,30 @@ public class ARPLayer implements BaseLayer{
 
     public boolean Send(byte[] input, int length) {
     	byte[] dstIPAddress = arp_header.getDstIPAddr();
+    	byte[] srcIPAddress = arp_header.getSrcIPAddr();
     	int index;
- 
     	
-    	if((index = IsInArpCacheTable(dstIPAddress)) > 0) {
-    		System.out.println("ARP Cache Table에 있는 IP주소로 전송 시작");
-    		byte[] TargetMac = ArpCacheTable.get(index).getMacAddr();
-    		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(TargetMac);
-    		this.arp_header.setDstMacAddr(TargetMac);
-    		
-    	} else {
-    		System.out.println("ARP Cache Table에 없는 IP주소로 전송 시작");
-    		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(BROADCAST);	//Broadcast로 목적지 설정
-    		_ARP_Cache cache = new _ARP_Cache(dstIPAddress, new byte[6], false);
-    		ArpCacheTable.add(cache);
+    	// Sender == Target : GARP MSG
+    	if(IsIPEquals(dstIPAddress, srcIPAddress)) {
+    		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(BROADCAST);
+    	}else {
+	    	if((index = IsInArpCacheTable(dstIPAddress)) > 0) {
+	    		System.out.println("ARP Cache Table에 있는 IP주소로 전송 시작");
+	    		byte[] TargetMac = ArpCacheTable.get(index).getMacAddr();
+	    		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(TargetMac);
+	    		this.arp_header.setDstMacAddr(TargetMac);
+	    		
+	    	} else {
+	    		System.out.println("ARP Cache Table에 없는 IP주소로 전송 시작");
+	    		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(BROADCAST);	//Broadcast로 목적지 설정
+	    		_ARP_Cache cache = new _ARP_Cache(dstIPAddress, new byte[6], false);
+	    		ArpCacheTable.add(cache);
+	    		// 모르는 주소이므로 3분으로 타이머 설정
+	    		Timer timer = this.setTimeOut(dstIPAddress, 3 * 60 * 1000);
+	        	timerList.put(IpToString(dstIPAddress), timer);
+	    	}
     	}
     	byte[] arpMsg = ObjToByte(arp_header, input, length);
-    	// 모르는 주소이므로 3분으로 타이머 설정
-    	Timer timer = this.setTimeOut(dstIPAddress, 3 * 60 * 1000);
-    	timerList.put(IpToString(dstIPAddress), timer);
     	((EthernetLayer)this.GetUnderLayer()).Send(arpMsg, arpMsg.length);
     	
 
@@ -389,7 +394,10 @@ public class ARPLayer implements BaseLayer{
             if(Arrays.equals(ArpCacheTable.get(i).ipAddr, IPAddr)) {
                 ArpCacheTable.remove(i);    // ArrayList에서 index이용해 제거한다.
                 return true;
-            }
+            }if(timerList.containsKey(IpToString(IPAddr))){
+    			System.out.println("Timer를 취소합니다  - IP 주소 : " + IpToString(IPAddr));
+    			timerList.get(IpToString(IPAddr)).cancel();
+    		}
         }
         return false;
     }

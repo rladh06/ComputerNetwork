@@ -156,6 +156,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 					for (int i = 0; i < 4; i++) {
 						dstIPAddr[i] = (byte) Integer.parseInt(dstIP[i]);
 					}
+					IPAddrInput.setText("");
 
 					// Step2
 					String msg = "";	// 상위 Layer에서 내려가는 data
@@ -265,24 +266,30 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		btnGratSend = new JButton("Send");
 		btnGratSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				String macAddr = GARPAddrInput.getText();
-				byte[] addr = StringToMAC(macAddr);		// 입력된 MAC 주소(이게 내 주소라고 생각)
-				
-				// ARP Layer의 src주소, dst 주소 모두 addr로 설정한다.
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcMacAddr(addr);	// Sender 주소
-				((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstMacAddr(addr);	// Target 주소
-				
-				// IPLayer의 dst ip주소를 나의 ip 주소로 설정한다.
-				((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_dst(MY_IP);
-				
-				// Ethernet Layer의 src mac 주소를 addr로 설정한다.
-				((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(addr);
-				
-				// TCP Layer로 내려보낸다.
-				// Step2
-				String msg = "";	// 상위 Layer에서 내려가는 data
-				byte[] input = msg.getBytes();
-				((TCPLayer)m_LayerMgr.GetLayer("TCP")).Send(input, input.length);
+				if (e.getSource() == btnGratSend) {
+					String newMacAddr = GARPAddrInput.getText();
+					byte[] newAddr = StringToMAC(newMacAddr);		// 입력된 MAC 주소(변경된 내 MAC 주소)
+					
+					// ARP Layer의 src주소, dst 주소 모두 addr로 설정한다.
+					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcMacAddr(newAddr);	// Sender 주소
+					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstMacAddr(newAddr);	// Target 주소
+					
+					// IPLayer의 dst ip주소를 나의 ip 주소로 설정한다.
+					((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_dst(MY_IP);
+					((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_src(MY_IP);
+					byte[] bc = new byte[6];
+			    	for(int i = 0 ; i < 6 ; i++) {
+			    		bc[i] = (byte)0xFF;
+			    	}
+					
+					((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(newAddr);		// Ethernet Layer의 src mac 주소를 addr로 설정한다.
+					((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_dstaddr(bc);		// broadcast 설정
+					
+					// TCP Layer로 내려보낸다.
+					String msg = "";	// 상위 Layer에서 내려가는 data
+					byte[] input = msg.getBytes();
+					((TCPLayer)m_LayerMgr.GetLayer("TCP")).Send(input, input.length);
+				}
 			}
 		});
 		btnGratSend.setBounds(144, 132, 75, 39);
