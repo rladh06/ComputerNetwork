@@ -149,7 +149,5 @@ unsigned char tcp_data[ TCP_DATA_SIZE ]; // data part
 		this.SetUpperLayer(pUULayer);
 		pUULayer.SetUnderLayer(this);
 	}
-	public void RequestUpdate() {
-    	((ApplicationLayer)this.GetUpperLayer(0)).GetArpTable();
-    }
+
 }

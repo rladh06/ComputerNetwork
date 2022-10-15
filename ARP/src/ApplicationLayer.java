@@ -51,6 +51,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		m_LayerMgr.GetLayer("IP").SetUnderLayer(m_LayerMgr.GetLayer("ARP"));
 		// ARP Layer - Ethernet Layer 양방향 연결
 		m_LayerMgr.GetLayer("ETHERNET").SetUpperUnderLayer(m_LayerMgr.GetLayer("ARP"));
+		((ARPLayer)m_LayerMgr.GetLayer("ARP")).SetGUI(((ApplicationLayer)m_LayerMgr.GetLayer("GUI")));//Update를 위해 변수로 전달함.
 
 	}
 

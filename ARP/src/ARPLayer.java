@@ -1,6 +1,9 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 
@@ -10,9 +13,12 @@ public class ARPLayer implements BaseLayer{
     public String pLayerName = null;
     public BaseLayer p_UnderLayer = null;
     public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-
+    public Hashtable<String,Timer> timerList = new Hashtable<>();
+    
     byte[] BROADCAST = broadcast();
 
+    // GUI Layer 변수
+    public ApplicationLayer GUI_LAYER;
     
     // ARP Cache Table
     public static ArrayList<_ARP_Cache> ArpCacheTable = new ArrayList<>();
@@ -193,7 +199,11 @@ public class ARPLayer implements BaseLayer{
     		ArpCacheTable.add(cache);
     	}
     	byte[] arpMsg = ObjToByte(arp_header, input, length);
+    	// 모르는 주소이므로 3분으로 타이머 설정
+    	Timer timer = this.setTimeOut(dstIPAddress, 3 * 60 * 1000);
+    	timerList.put(IpToString(dstIPAddress), timer);
     	((EthernetLayer)this.GetUnderLayer()).Send(arpMsg, arpMsg.length);
+    	
 
 		return true;
 
@@ -244,21 +254,27 @@ public class ARPLayer implements BaseLayer{
     	byte[] TargetIP = Arrays.copyOfRange(input, 24,28);
 
     	UpdateARPCache(SenderIP, SenderMac, true);
+    	
+    	// 이미 존재하는 IP 주소라면( timer Reset함)
+		if(timerList.containsKey(IpToString(SenderIP))){
+			System.out.println("Timer를 취소합니다  - IP 주소 : " + IpToString(SenderIP));
+			timerList.get(IpToString(SenderIP)).cancel();
+		}
+
+		System.out.println("== 새 Timer 설정(MAC 주소를 알고 있으므로 20분으로 설정합니다) ==");
+    	Timer timer = this.setTimeOut(SenderIP, 20 * 60 * 1000);
+    	timerList.put(IpToString(SenderIP), timer);
     	if(opCode[1] == (byte) 0x01){
 	    	// 나한테 온 것 -> Reply보내야함
     		if(IsIPEquals(SenderIP, TargetIP)) {
     			System.out.println("GARP MSG 받음");
     		}
-    		else if(IsMyIP(TargetIP)) {
-	    		System.out.println("나한테 온 메세지 - Reply 전송합니다.");
-	    		ReplySend(input);
-	    	} else if(IsInProxyTable(TargetIP)) {
-	    		System.out.println("Proxy에 포함된 주소 - Reply전송합니다.");
+    		else if(IsMyIP(TargetIP) || IsInProxyTable(TargetIP)) {
+    			System.out.println("응답 메세지 보냅니다.");
 	    		ReplySend(input);
 	    	}
     	}
-    	
-    	RequestUpdate();
+    	GUI_LAYER.GetArpTable();	// ARP Table 업데이트
 
 		return true;
     }
@@ -284,6 +300,27 @@ public class ARPLayer implements BaseLayer{
         
         return buf;
     }
+    
+    // ip 배열 주소를 String으로 변환하는 함수
+    public String IpToString(byte[] ipAddr) {
+    	String buf = "";
+    	for(int i = 0 ; i < 4 ; i++) {
+    		buf += (int) ipAddr[i] & 0xff;
+    		if (i != 3) buf += ".";
+    	}
+    	return buf;
+    	
+    }
+ // String의 IP주소를 byte[]로 변환
+ 	public byte[] StringToIP(String ipAddr){
+ 		byte[] buf = new byte[4];
+ 		String[] temp = ipAddr.split("\\.");
+ 		for(int i = 0; i < 4; i++){
+ 			buf[i] = (byte)Integer.parseInt(temp[i]);
+ 		}
+ 		
+ 		return buf;
+ 	}
 
 
     // ARP Msg의 Target IP와 나의 IP 주소와 비교
@@ -308,6 +345,7 @@ public class ARPLayer implements BaseLayer{
     		_Proxy_Entry entry = iter.next();
     		byte[] addr = entry.ipAddr;
     		if (IsIPEquals(targetIP, addr)){
+    			System.out.println("Proxy 테이블에 존재");
     			return true;
     		}
     	}
@@ -395,6 +433,11 @@ public class ARPLayer implements BaseLayer{
     	}
     	return bc;
     }
+    
+    // GUI Layer 설정하는 함수
+    public void SetGUI(ApplicationLayer GUI) {
+    	this.GUI_LAYER = GUI;
+    }
 
     
     @Override
@@ -437,9 +480,23 @@ public class ARPLayer implements BaseLayer{
         pUULayer.SetUnderLayer(this);
     }
     
-    public void RequestUpdate() {
-    	((EthernetLayer)this.GetUnderLayer()).RequestUpdate();
+    
+    /* Timer 관련 함수 생성 */
+    private Timer setTimeOut(byte[] srcIPAddr, long time) {
+    	Timer timer = new Timer(IpToString(srcIPAddr));		// Timer 생성
+    	TimerTask task = new TimerTask() {
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				RemoveARPCache(StringToIP(Thread.currentThread().getName())); // 삭제한다.
+				GUI_LAYER.GetArpTable();		// Update
+				System.out.println("!!TimeOut!! - IP주소: " +Thread.currentThread().getName()+"가 "+ time /  1000 + "초가 지나서 삭제되었습니다.");
+			}
+    	};
+    	timer.schedule(task, time);		// timer
+    	return timer;
     }
+    
 
 
 }

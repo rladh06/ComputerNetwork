@@ -202,8 +202,5 @@ public class EthernetLayer implements BaseLayer {
 		return true;
 	}
 	
-	public void RequestUpdate() {
-    	((IPLayer)this.GetUpperLayer(0)).RequestUpdate();
-    }
 
 }

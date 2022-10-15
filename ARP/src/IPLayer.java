@@ -164,7 +164,5 @@ public class IPLayer implements BaseLayer {
 		this.SetUpperLayer(pUULayer);
 		pUULayer.SetUnderLayer(this);
 	}
-	public void RequestUpdate() {
-    	((TCPLayer)this.GetUpperLayer(0)).RequestUpdate();
-    }
+
 }
