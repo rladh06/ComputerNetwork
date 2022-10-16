@@ -184,13 +184,14 @@ public class ARPLayer implements BaseLayer{
     public boolean Send(byte[] input, int length) {
     	byte[] dstIPAddress = arp_header.getDstIPAddr();
     	byte[] srcIPAddress = arp_header.getSrcIPAddr();
-    	int index;
+    	int index = -1;
     	
     	// Sender == Target : GARP MSG
     	if(IsIPEquals(dstIPAddress, srcIPAddress)) {
     		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(BROADCAST);
     	}else {
-	    	if((index = IsInArpCacheTable(dstIPAddress)) > 0) {
+    		index = IsInArpCacheTable(dstIPAddress);
+	    	if(index >= 0) {
 	    		System.out.println("ARP Cache Table에 있는 IP주소로 전송 시작");
 	    		byte[] TargetMac = ArpCacheTable.get(index).getMacAddr();
 	    		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(TargetMac);
@@ -199,11 +200,13 @@ public class ARPLayer implements BaseLayer{
 	    	} else {
 	    		System.out.println("ARP Cache Table에 없는 IP주소로 전송 시작");
 	    		((EthernetLayer)this.GetUnderLayer()).set_dstaddr(BROADCAST);	//Broadcast로 목적지 설정
-	    		_ARP_Cache cache = new _ARP_Cache(dstIPAddress, new byte[6], false);
+	    		byte[] TargetMac = new byte[6];
+	    		_ARP_Cache cache = new _ARP_Cache(dstIPAddress, TargetMac, false);
 	    		ArpCacheTable.add(cache);
 	    		// 모르는 주소이므로 3분으로 타이머 설정
 	    		Timer timer = this.setTimeOut(dstIPAddress, 3 * 60 * 1000);
 	        	timerList.put(IpToString(dstIPAddress), timer);
+	        	
 	    	}
     	}
     	byte[] arpMsg = ObjToByte(arp_header, input, length);
@@ -217,8 +220,7 @@ public class ARPLayer implements BaseLayer{
 
     // Reply Send할 때 쓸 함수
     public boolean ReplySend(byte[] request) {
-    	System.out.print("받은 ");
-    	PrintMsg(request);
+
     	System.out.println("==== 응답 전송 ====");
     	// 받은 ARP RequstMsg에서의 주소
     	byte[] rplMsg = new byte[request.length];
@@ -231,8 +233,7 @@ public class ARPLayer implements BaseLayer{
     	
     	byte[] targetMac = new byte[6];
     	System.arraycopy(rplMsg, 18, targetMac, 0, 6);
-    	System.out.print("답장 ");
-    	PrintMsg(rplMsg);
+
     	((EthernetLayer)this.GetUnderLayer()).set_dstaddr(targetMac);
     	((EthernetLayer)this.GetUnderLayer()).Send(rplMsg, rplMsg.length);
     	return true;
@@ -249,18 +250,12 @@ public class ARPLayer implements BaseLayer{
     // Receive 함수
     public boolean Receive(byte[] input) {
     	System.out.print("메세지 받는중 : ");
-    	for(int i = 0 ; i < input.length ; i++) {
-    		System.out.print(input[i]+" ");
-    	}
-    	System.out.println();
     	byte[] opCode = Arrays.copyOfRange(input, 6, 8);
     	byte[] SenderMac = Arrays.copyOfRange(input, 8, 14);
     	byte[] SenderIP = Arrays.copyOfRange(input, 14,18);
     	byte[] TargetIP = Arrays.copyOfRange(input, 24,28);
-
-    	UpdateARPCache(SenderIP, SenderMac, true);
     	
-    	// 이미 존재하는 IP 주소라면( timer Reset함)
+    	// 이미 존재하는 IP 주소라면( timer Reset함 )
 		if(timerList.containsKey(IpToString(SenderIP))){
 			System.out.println("Timer를 취소합니다  - IP 주소 : " + IpToString(SenderIP));
 			timerList.get(IpToString(SenderIP)).cancel();
@@ -269,16 +264,20 @@ public class ARPLayer implements BaseLayer{
 		System.out.println("== 새 Timer 설정(MAC 주소를 알고 있으므로 20분으로 설정합니다) ==");
     	Timer timer = this.setTimeOut(SenderIP, 20 * 60 * 1000);
     	timerList.put(IpToString(SenderIP), timer);
+    	
     	if(opCode[1] == (byte) 0x01){
-	    	// 나한테 온 것 -> Reply보내야함
+	    	// GARP 받은 경우
     		if(IsIPEquals(SenderIP, TargetIP)) {
     			System.out.println("GARP MSG 받음");
+    			
     		}
+    		// 나한테 온 것 -> Reply보내야함
     		else if(IsMyIP(TargetIP) || IsInProxyTable(TargetIP)) {
     			System.out.println("응답 메세지 보냅니다.");
 	    		ReplySend(input);
 	    	}
     	}
+    	UpdateARPCache(SenderIP, SenderMac, true);
     	GUI_LAYER.GetArpTable();	// ARP Table 업데이트
 
 		return true;

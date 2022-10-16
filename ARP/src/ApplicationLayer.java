@@ -261,28 +261,35 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		lblHwA.setBounds(14, 42, 135, 34);
 		GratuitousPane.add(lblHwA);
 		
+		
+		GARPAddrInput = new JTextField();
+		GARPAddrInput.setBounds(14, 75, 321, 34);
+		GratuitousPane.add(GARPAddrInput);
+		GARPAddrInput.setColumns(10);
 
 		// Gratuitous ARP의 Send 버튼
 		btnGratSend = new JButton("Send");
 		btnGratSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (e.getSource() == btnGratSend) {
+					System.out.println("==== GARP 전송입니다.====");
 					String newMacAddr = GARPAddrInput.getText();
 					byte[] newAddr = StringToMAC(newMacAddr);		// 입력된 MAC 주소(변경된 내 MAC 주소)
 					
-					// ARP Layer의 src주소, dst 주소 모두 addr로 설정한다.
+//					// ARP Layer의 src Mac 주소는 newAddr로, dstIP주소는 MY_IP로 설정한다.
 					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setSrcMacAddr(newAddr);	// Sender 주소
-					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstMacAddr(newAddr);	// Target 주소
+					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstIPAddr(MY_IP);
+//					((ARPLayer)m_LayerMgr.GetLayer("ARP")).arp_header.setDstMacAddr(newAddr);	// Target 주소
 					
-					// IPLayer의 dst ip주소를 나의 ip 주소로 설정한다.
+					// IPLayer의 dst,src ip주소를 나의 ip 주소로 설정한다.
 					((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_dst(MY_IP);
 					((IPLayer)m_LayerMgr.GetLayer("IP")).m_sHeader.setIp_src(MY_IP);
 					byte[] bc = new byte[6];
 			    	for(int i = 0 ; i < 6 ; i++) {
-			    		bc[i] = (byte)0xFF;
+			    		bc[i] = (byte)0xff;
 			    	}
 					
-					((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(newAddr);		// Ethernet Layer의 src mac 주소를 addr로 설정한다.
+					//((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_srcaddr(newAddr);		// Ethernet Layer의 src mac 주소를 addr로 설정한다.
 					((EthernetLayer)m_LayerMgr.GetLayer("ETHERNET")).set_dstaddr(bc);		// broadcast 설정
 					
 					// TCP Layer로 내려보낸다.
@@ -295,11 +302,7 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 		btnGratSend.setBounds(144, 132, 75, 39);
 		GratuitousPane.add(btnGratSend);
 		
-		
-		GARPAddrInput = new JTextField();
-		GARPAddrInput.setBounds(14, 75, 321, 34);
-		GratuitousPane.add(GARPAddrInput);
-		GARPAddrInput.setColumns(10);
+
 		
 		JPanel panel = new JPanel();
 		panel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Address", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
@@ -419,8 +422,9 @@ public class ApplicationLayer extends JFrame implements BaseLayer{
 			String strIPAddr = ipToString(ipAddr);
 			
 			// MAC 주소 알면 MAC 주소로, 모르면 ????????로 나타냄
-			strMacAddr = arpCache.status == true ? macToString(macAddr) : "???????????????";
+			strMacAddr = arpCache.status == true ? macToString(macAddr) : "?????????????";
 			ARPCacheList.add(String.format("%15s", strIPAddr) + "          " + strMacAddr + "          " + status);
+			System.out.println("Table 갯수 : " + ARPLayer.ArpCacheTable.size());
 		}
 		return true;
 	}
