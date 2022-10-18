@@ -115,9 +115,9 @@ public class ARPLayer implements BaseLayer{
     // ARP MSG Reset 함수
     private void ResetMSG() {
     	arp_header.hardType[0] = (byte)0x00;
-    	arp_header.hardType[1] = (byte)0x01;		// hardware Type은 0x01 고정
+    	arp_header.hardType[1] = (byte)0x01;		// hardware Type은 0x01 고정(Ethernet이므로)
     	arp_header.protType[0] = (byte)0x08;
-    	arp_header.protType[1] = (byte)0x06;		// ARP Type은 0x0806 (Chat/File 구현시 삭제)
+    	arp_header.protType[1] = (byte)0x00;		// protocol type은 IPv4이므로 0x0800
     	arp_header.hardSize = (byte)0x06;			// Ethernet은 6bytes
     	arp_header.protSize = (byte)0x04;			// IPv4 사용하므로 4bytes
     	arp_header.opCode[0] = (byte)0x00;

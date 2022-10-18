@@ -88,7 +88,7 @@ unsigned char tcp_data[ TCP_DATA_SIZE ]; // data part
 	public byte[] ObjToByte(_TCP_HEADER header, byte[] input, int length) {
 		byte[] buf = new byte[24 + length];
 		//TO-DO : 객체 -> byte 바꾸는 배열 필요
-/*		buf[0] = header.tcp_sport.addr[0];
+		buf[0] = header.tcp_sport.addr[0];
 		buf[1] = header.tcp_sport.addr[1];
 		buf[2] = header.tcp_dport.addr[0];
 		buf[3] = header.tcp_dport.addr[1];
@@ -101,8 +101,8 @@ unsigned char tcp_data[ TCP_DATA_SIZE ]; // data part
 		buf[16] = header.tcp_cksum[0];
 		buf[17] = header.tcp_cksum[1];
 		buf[18] = header.tcp_urgptr[0];
-		buf[19] = header.tcp_urgptr[1];*/
-		//System.arraycopy(header.Padding, 0, buf, 20, 4);
+		buf[19] = header.tcp_urgptr[1];
+		System.arraycopy(header.Padding, 0, buf, 20, 4);
 		for(int i = 0; i < length ; i++) {
 			buf[23 + i] = input[i];
 		}
