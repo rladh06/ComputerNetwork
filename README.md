@@ -22,6 +22,12 @@ Router에 Routing Table을 수동으로 입력해야하므로 Static Router
 1. 모든 Router가 이 과정을 반복하여 목적지까지 패킷을 전달한다.
 
 
+## Network Topology
+<img width="615" alt="스크린샷 2022-11-22 오후 3 05 38" src="https://user-images.githubusercontent.com/81208791/203237443-19c6b468-56ec-4522-9294-30d6dd238f5c.png">
+
+
+
+
 
 
 
