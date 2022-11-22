@@ -2,6 +2,30 @@
 1. ARP Protocol
 2. Static Router
 
+# TermProject#2 Static Router
+## Goal
+다른 네트워크에 있는 호스트와 통신하기 위한 라우터 프로그램
+
+## Static Router
+Router에 Routing Table을 수동으로 입력해야하므로 Static Router
+
+## Router의 동작과정
+### 패킷 수신
+1. 해당 패킷의 IP 목적지 주소를 가져온다.
+1. Routing Table을 통해 해당 패킷을 전달할 네트워크 주소를 알아낸다
+1. 네트워크 주소로 보내기 위한 인터페이스를 선택
+1. 선택된 인터페이스를 통해 Gateway(by Routing Table)로 패킷을 전송한다.
+    - Gateway의 IP 주소는 Routing Table을 통해서 알 수 있다.
+    - 패킷을 Gateway에 전달하려면 그 Gateway의 MAC 주소를 알아야 한다.
+    - MAC 주소는 ARP cache table에서 Gateway 주소에 해당하는 MAC 주소를 가져온다.
+    - <b>ARP cache table에 Gateway의 정보가 없다면 ARP 메세지를 통해서 MAC 주소를 알아낸다.</b>
+1. 모든 Router가 이 과정을 반복하여 목적지까지 패킷을 전달한다.
+
+
+
+
+
+
 # TermProject#1 ARP
 
 ## ARP Protocol
@@ -60,3 +84,4 @@ Basic ARP, Proxy ARP, Grauitous ARP에 대한 모든 기능 구성
 - [ ] GUI 추가 구현
 - [ ] Layer 연결 수정
 - [ ] 각각의 Chat/File과 연결
+
