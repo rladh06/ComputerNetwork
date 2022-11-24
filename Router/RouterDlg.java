@@ -69,6 +69,7 @@ public class RouterDlg extends JFrame implements BaseLayer{
     private JButton btnProxyDelete;
     private JDialog addRouterDlg;
     private JDialog proxyAddDlg;
+    private DefaultTableModel StaticRouterModel, ARPCacheModel, ProxyARPModel;
 
     
 
@@ -101,13 +102,15 @@ public class RouterDlg extends JFrame implements BaseLayer{
 		StaticRouterPane.add(RouterScrollPane);
 		
 		StaticRouterTable = new JTable();
-		StaticRouterTable.setModel(new DefaultTableModel(
-			new Object[][] {
-			},
-			new String[] {
-				"Destination", "Netmask", "Gateway", "Flag", "Interface", "Metric"
-			}
-		));
+		StaticRouterModel = new DefaultTableModel(
+				new Object[][] {
+						{"123.123.123,123","123.123.123,123","123.123.123.123","UP","1","Host1"}
+				},
+				new String[] {
+					"Destination", "Netmask", "Gateway", "Flag", "Interface", "Metric"
+				}
+			);
+		StaticRouterTable.setModel(StaticRouterModel);
 		RouterScrollPane.setViewportView(StaticRouterTable);
 		
 		btnRouterAdd = new JButton("Add");
@@ -123,6 +126,16 @@ public class RouterDlg extends JFrame implements BaseLayer{
 		StaticRouterPane.add(btnRouterAdd);
 		
 		btnRouterDelete = new JButton("Delete");
+		btnRouterDelete.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int selectedIndex = StaticRouterTable.getSelectedRow();
+				if(selectedIndex != -1){
+					//remove selected row from the model
+					StaticRouterModel.removeRow(selectedIndex);
+					// TODO: Routing Table Class에서 해당 index 삭제하는 과정
+				}
+			}
+		});
 		btnRouterDelete.setBounds(345, 441, 105, 27);
 		StaticRouterPane.add(btnRouterDelete);
 		
@@ -142,13 +155,14 @@ public class RouterDlg extends JFrame implements BaseLayer{
 		ARPCachePane.add(ARPScrollPane);
 		
 		ARPCacheTable = new JTable();
-		ARPCacheTable.setModel(new DefaultTableModel(
-			new Object[][] {
-			},
-			new String[] {
-				"IP Address", "Ethernet Address", "Interface", "Flag"
-			}
-		));
+		ARPCacheModel = new DefaultTableModel(
+				new Object[][] {
+				},
+				new String[] {
+					"IP Address", "Ethernet Address", "Interface", "Flag"
+				}
+			);
+		ARPCacheTable.setModel(ARPCacheModel);
 		ARPScrollPane.setViewportView(ARPCacheTable);
 		
 		btnARPDelete = new JButton("Delete");
@@ -171,13 +185,14 @@ public class RouterDlg extends JFrame implements BaseLayer{
 		ProxyPane.add(ProxyScrollPane);
 		
 		ProxyARPTable = new JTable();
-		ProxyARPTable.setModel(new DefaultTableModel(
-			new Object[][] {
-			},
-			new String[] {
-				"IP Address", "Ethernet Address", "Interface"
-			}
-		));
+		ProxyARPModel = new DefaultTableModel(
+				new Object[][] {
+				},
+				new String[] {
+					"IP Address", "Ethernet Address", "Interface"
+				}
+			);
+		ProxyARPTable.setModel(ProxyARPModel);
 		ProxyScrollPane.setViewportView(ProxyARPTable);
 		
 		btnProxyAdd = new JButton("Add");
@@ -269,9 +284,10 @@ public class RouterDlg extends JFrame implements BaseLayer{
 			chckbxHost.setBounds(298, 160, 66, 27);
 			AddRouterPane.add(chckbxHost);
 			
-			JComboBox comboBox = new JComboBox();
-			comboBox.setBounds(126, 207, 109, 24);
-			AddRouterPane.add(comboBox);
+			JComboBox NICList = new JComboBox();
+			NICList.setBounds(126, 207, 109, 24);
+			SetCombobox(NICList);
+			AddRouterPane.add(NICList);
 			
 			JButton btnAdd = new JButton("Add");
 			btnAdd.setBounds(83, 271, 84, 27);
@@ -280,6 +296,19 @@ public class RouterDlg extends JFrame implements BaseLayer{
 			JButton btnCancel = new JButton("Cancel");
 			btnCancel.setBounds(208, 271, 84, 27);
 			AddRouterPane.add(btnCancel);
+		}
+		
+		private void SetCombobox(JComboBox NICList) {
+			java.util.List<PcapIf> m_pAdapterList = new ArrayList<PcapIf>();
+			StringBuilder errbuf = new StringBuilder();
+
+			int r = Pcap.findAllDevs(m_pAdapterList, errbuf);
+			if (r == Pcap.NOT_OK || m_pAdapterList.isEmpty()) {
+				System.err.printf("Can't read list of devices, error is %s", errbuf.toString());
+				return;
+			}
+			for (int i = 0; i < m_pAdapterList.size(); i++)
+				NICList.addItem(m_pAdapterList.get(i).getDescription());
 		}
 		
 		
