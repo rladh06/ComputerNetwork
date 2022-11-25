@@ -37,6 +37,7 @@ public class RouterDlg extends JFrame implements BaseLayer{
     public ArrayList<PcapIf> m_pAdapterList;
 
     private static LayerManager m_LayerMgr = new LayerManager();
+    public static RoutingTable routingTable;
 
     public static void main(String[] args) {
     	/*
@@ -45,6 +46,7 @@ public class RouterDlg extends JFrame implements BaseLayer{
     	 * - Layer 연결
     	 */
     	RouterDlg layer = new RouterDlg("GUI");
+    	routingTable = new RoutingTable();
 
 	}
 
@@ -69,7 +71,7 @@ public class RouterDlg extends JFrame implements BaseLayer{
     private JButton btnProxyDelete;
     private JDialog addRouterDlg;
     private JDialog proxyAddDlg;
-    private DefaultTableModel StaticRouterModel, ARPCacheModel, ProxyARPModel;
+    public DefaultTableModel StaticRouterModel, ARPCacheModel, ProxyARPModel;
 
     
 
@@ -290,12 +292,61 @@ public class RouterDlg extends JFrame implements BaseLayer{
 			AddRouterPane.add(NICList);
 			
 			JButton btnAdd = new JButton("Add");
+			btnAdd.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					byte[] dstIP = StringToByte(DestIP.getText());
+					byte[] netmask = StringToByte(NetMaskIP.getText());
+					byte[] gateway = StringToByte(GatewayIP.getText());
+					String flag = getFlag();
+					String inter = getInterface();
+					int metric = getMetric();
+					//routingTable 클래스에 Entry 추가
+					routingTable.addRoutingEntry(dstIP, netmask, gateway, flag, inter, metric);
+					//TODO: GUI의 라우팅 테이블에 업데이트
+				}
+			});
 			btnAdd.setBounds(83, 271, 84, 27);
 			AddRouterPane.add(btnAdd);
 			
 			JButton btnCancel = new JButton("Cancel");
 			btnCancel.setBounds(208, 271, 84, 27);
 			AddRouterPane.add(btnCancel);
+		}
+		
+		private String getInterface(){
+			String output = "interface0";
+			//TODO : Interface 설정 하는 과정 필요(NILayer)
+			
+			//TODO : Interface Name 반환
+			return output;
+		}
+		
+		private int getMetric(){
+			int output = 1;
+			//TODO : Metric....반환....
+			return output;
+		}
+		
+		private String getFlag(){
+			String output = "";
+			// TODO : Flag 확인해서 String으로 변환해서 return
+			
+			return output;
+		}
+		
+		private byte[] StringToByte(String input){
+			byte[] output = new byte[4];		//IP 주소는 4byte
+			String[] tmp = input.split("\\.");
+			for(int i = 0 ; i < tmp.length; i++){
+				output[i] = Int2Byte(Integer.parseInt(tmp[i]));
+			}
+			return output;
+		}
+		
+		private byte Int2Byte(int src){
+			byte result = 0;
+			// TODO : IP주소 숫자를 byte 배열에 넣기 위해서 바꾸는 과정이 필요함
+			return result;
 		}
 		
 		private void SetCombobox(JComboBox NICList) {
