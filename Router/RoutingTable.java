@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 public class RoutingTable {
@@ -78,7 +79,33 @@ public class RoutingTable {
 	}
 	
 	// TODO: Routing Table에서 Masking하는 함수
-	
+	public _ROUTING_ENTRY_ findMatchingEntry(byte[] dstIP) {
+		for (int i = 0; i < routingTable.size(); i++) {
+			// current entry object
+			_ROUTING_ENTRY_ currentEntry = routingTable.get(i);
+
+			byte[] subnetMask = currentEntry.RT_NETMASK;
+			byte[] maskingResult = maskingDstIP(dstIP, subnetMask);
+
+			// matching success
+			if (Arrays.equals(currentEntry.RT_DEST_IP, maskingResult))
+				return currentEntry;
+		}
+
+		return null;
+	}
+
+	// masking dstIP for subnetMask
+	public byte[] maskingDstIP(byte[] dstIP, byte[] subnetMask) {
+		byte[] maskingResult = new byte[4];
+		for (int i = 0; i < 4; i++) {
+			maskingResult[i] = (byte) (dstIP[i] & subnetMask[i]);
+		}
+		
+		return maskingResult;
+	}
+
+
 	// TODO: Routing Table에 있는지 확인하는 함수
 	
 
